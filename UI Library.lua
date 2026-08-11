@@ -9,7 +9,7 @@ local function makeDraggable(frame)
 	local startPos
 	local currentPos
 
-	local smoothness = 0.03 -- lower = snappier, higher = softer
+	local smoothness = 0.07 -- lower = snappier, higher = softer
 
 	frame.InputBegan:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -72,7 +72,7 @@ function Library:CreateWindow(title)
 	TextLabel.BackgroundTransparency = 1
 	TextLabel.Position = UDim2.new(0, 12, 0, 8)
 	TextLabel.Size = UDim2.new(1, -24, 0, 24)
-	TextLabel.Font = Enum.Font.Montserrat
+	TextLabel.FontFace = Font.fromName("Montserrat", Enum.FontWeight.ExtraBold)
 	TextLabel.Text = title or "Window"
 	TextLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 	TextLabel.TextSize = 16
