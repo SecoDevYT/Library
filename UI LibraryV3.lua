@@ -9,7 +9,7 @@ local function makeDraggable(frame)
 	local startPos
 	local currentPos
 
-	local smoothness = 0.4 -- lower = snappier, higher = softer
+	local smoothness = 2 -- lower = snappier, higher = softer
 
 	frame.InputBegan:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
