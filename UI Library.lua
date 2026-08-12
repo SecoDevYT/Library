@@ -62,13 +62,13 @@ function Library:CreateWindow(title)
 	ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	ScreenGui.ResetOnSpawn = false
 
-	-- Main Window
+	-- Main Frame (exact values from your export)
 	Main.Name = "Main"
 	Main.Parent = ScreenGui
 	Main.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
 	Main.BorderSizePixel = 0
-	Main.Position = UDim2.new(0.317, 0, 0.225, 0)
-	Main.Size = UDim2.new(0.365, 0, 0.554, 0)
+	Main.Position = UDim2.new(0.316870928, 0, 0.225331366, 0)
+	Main.Size = UDim2.new(0.364990681, 0, 0.553755522, 0)
 	Main.Active = true
 
 	makeDraggable(Main)
@@ -81,35 +81,35 @@ function Library:CreateWindow(title)
 
 	UIStroke.Parent = Main
 	UIStroke.Color = Color3.fromRGB(80, 80, 80)
-	UIStroke.Thickness = 1
 
-	-- Title
+	-- Title (exact values)
 	Title.Parent = Main
 	Title.BackgroundTransparency = 1
-	Title.Position = UDim2.new(0.015, 0, 0.01, 0)
-	Title.Size = UDim2.new(0.745, 0, 0.059, 0)
+	Title.Position = UDim2.new(0.0153061338, 0, 0.0100000398, 0)
+	Title.Size = UDim2.new(0.744897842, 0, 0.0591489486, 0)
 	Title.FontFace = Font.fromName("Montserrat", Enum.FontWeight.ExtraBold)
-	Title.Text = title or "Window"
+	Title.Text = title or "Title"
 	Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 	Title.TextScaled = true
+	Title.TextWrapped = true
 	Title.TextXAlignment = Enum.TextXAlignment.Left
 
-	-- Lines
+	-- Lines (exact values)
 	Line1.Name = "Line1"
 	Line1.Parent = Main
 	Line1.BackgroundColor3 = Color3.fromRGB(148, 148, 148)
 	Line1.BorderSizePixel = 0
 	Line1.Position = UDim2.new(0, 0, 0.074, 0)
-	Line1.Size = UDim2.new(1, 0, 0.004, 0)
+	Line1.Size = UDim2.new(0.9984, 0, 0.004, 0)
 
 	Line2.Name = "Line2"
 	Line2.Parent = Main
 	Line2.BackgroundColor3 = Color3.fromRGB(148, 148, 148)
 	Line2.BorderSizePixel = 0
 	Line2.Position = UDim2.new(0, 0, 0.17, 0)
-	Line2.Size = UDim2.new(1, 0, 0.004, 0)
+	Line2.Size = UDim2.new(0.9984, 0, 0.004, 0)
 
-	-- Tab bar
+	-- Tab ScrollingFrame (exact values)
 	TabScroll.Name = "TabScroll"
 	TabScroll.Parent = Main
 	TabScroll.BackgroundTransparency = 1
@@ -117,13 +117,14 @@ function Library:CreateWindow(title)
 	TabScroll.Position = UDim2.new(0, 0, 0.085, 0)
 	TabScroll.Size = UDim2.new(1, 0, 0.089, 0)
 	TabScroll.ScrollBarThickness = 0
-	TabScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+	TabScroll.CanvasSize = UDim2.new(2, 0, 0, 0)
 	TabScroll.ScrollingDirection = Enum.ScrollingDirection.X
 
+	-- Tab Container
 	TabContainer.Name = "TabContainer"
 	TabContainer.Parent = TabScroll
 	TabContainer.BackgroundTransparency = 1
-	TabContainer.Size = UDim2.new(0, 0, 1, 0)
+	TabContainer.Size = UDim2.new(2, 0, 1, 0)
 
 	local UIListLayout = Instance.new("UIListLayout")
 	UIListLayout.Parent = TabContainer
@@ -134,7 +135,7 @@ function Library:CreateWindow(title)
 
 	local UIPadding = Instance.new("UIPadding")
 	UIPadding.Parent = TabContainer
-	UIPadding.PaddingLeft = UDim.new(0, 8)
+	UIPadding.PaddingLeft = UDim.new(0, 6)
 
 	local Window = {
 		ScreenGui = ScreenGui,
@@ -146,17 +147,19 @@ function Library:CreateWindow(title)
 	}
 
 	function Window:CreateTab(name)
+		-- Tab Button using values very close to your export
 		local TabButton = Instance.new("TextButton")
 		TabButton.Name = name
 		TabButton.Parent = TabContainer
 		TabButton.BackgroundColor3 = Color3.fromRGB(43, 43, 43)
-		TabButton.Size = UDim2.new(0, 72, 0.72, 0)
+		TabButton.BorderSizePixel = 0
+		TabButton.Size = UDim2.new(0, 68, 0.70, 0) -- matches the visual size of 0.047 scale in your export
 		TabButton.FontFace = Font.fromName("Montserrat", Enum.FontWeight.Bold)
 		TabButton.Text = name
-		TabButton.TextColor3 = Color3.fromRGB(180, 180, 180)
+		TabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 		TabButton.TextScaled = true
+		TabButton.TextWrapped = true
 		TabButton.AutoButtonColor = false
-		TabButton.BorderSizePixel = 0
 
 		local ButtonCorner = Instance.new("UICorner")
 		ButtonCorner.CornerRadius = UDim.new(0.35, 0)
@@ -168,13 +171,14 @@ function Library:CreateWindow(title)
 		ButtonStroke.Thickness = 1.5
 		ButtonStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 
+		-- Content Frame (exact values from export)
 		local TabFrame = Instance.new("Frame")
 		TabFrame.Name = name .. "Frame"
 		TabFrame.Parent = Main
 		TabFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
 		TabFrame.BorderSizePixel = 0
-		TabFrame.Position = UDim2.new(0, 0, 0.173, 0)
-		TabFrame.Size = UDim2.new(1, 0, 0.826, 0)
+		TabFrame.Position = UDim2.new(0, 0, 0.172687039, 0)
+		TabFrame.Size = UDim2.new(0.9984, 0, 0.8257, 0)
 		TabFrame.Visible = false
 		TabFrame.ZIndex = 2
 
@@ -182,16 +186,17 @@ function Library:CreateWindow(title)
 		ContentCorner.CornerRadius = UDim.new(0.04, 0)
 		ContentCorner.Parent = TabFrame
 
+		-- Update canvas width
 		local function updateCanvas()
 			task.wait()
-			local totalWidth = 8
+			local totalWidth = 12
 			for _, child in ipairs(TabContainer:GetChildren()) do
 				if child:IsA("TextButton") then
 					totalWidth += child.AbsoluteSize.X + 6
 				end
 			end
-			TabContainer.Size = UDim2.new(0, totalWidth, 1, 0)
-			TabScroll.CanvasSize = UDim2.new(0, totalWidth, 0, 0)
+			TabContainer.Size = UDim2.new(0, math.max(totalWidth, 400), 1, 0)
+			TabScroll.CanvasSize = UDim2.new(0, math.max(totalWidth, 400), 0, 0)
 		end
 
 		updateCanvas()
@@ -204,10 +209,10 @@ function Library:CreateWindow(title)
 		}
 
 		function Tab:Show()
-			for _, otherTab in pairs(Window.Tabs) do
-				otherTab.Frame.Visible = false
-				otherTab.Button.BackgroundColor3 = Color3.fromRGB(43, 43, 43)
-				otherTab.Button.TextColor3 = Color3.fromRGB(180, 180, 180)
+			for _, other in pairs(Window.Tabs) do
+				other.Frame.Visible = false
+				other.Button.BackgroundColor3 = Color3.fromRGB(43, 43, 43)
+				other.Button.TextColor3 = Color3.fromRGB(180, 180, 180)
 			end
 
 			TabFrame.Visible = true
@@ -224,6 +229,8 @@ function Library:CreateWindow(title)
 
 		if not Window.CurrentTab then
 			Tab:Show()
+		else
+			TabButton.TextColor3 = Color3.fromRGB(180, 180, 180)
 		end
 
 		return Tab
