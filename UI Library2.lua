@@ -8,7 +8,7 @@ local function makeDraggable(frame)
 	local dragStart
 	local startPos
 	local currentPos
-	local smoothness = 0.075
+	local smoothness = 0.18
 
 	frame.InputBegan:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -57,7 +57,7 @@ function Library:CreateWindow(title)
 	local UIStroke = Instance.new("UIStroke")
 
 	-- ScreenGui
-	ScreenGui.Name = "UI"
+	ScreenGui.Name = "MonstrumUI"
 	ScreenGui.Parent = game:GetService("CoreGui")
 	ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	ScreenGui.ResetOnSpawn = false
@@ -94,7 +94,7 @@ function Library:CreateWindow(title)
 	Title.TextScaled = true
 	Title.TextXAlignment = Enum.TextXAlignment.Left
 
-	-- Top & bottom lines
+	-- Lines
 	Line1.Name = "Line1"
 	Line1.Parent = Main
 	Line1.BackgroundColor3 = Color3.fromRGB(148, 148, 148)
@@ -109,7 +109,7 @@ function Library:CreateWindow(title)
 	Line2.Position = UDim2.new(0, 0, 0.17, 0)
 	Line2.Size = UDim2.new(1, 0, 0.004, 0)
 
-	-- Tab bar (horizontal scrolling)
+	-- Tab bar
 	TabScroll.Name = "TabScroll"
 	TabScroll.Parent = Main
 	TabScroll.BackgroundTransparency = 1
@@ -123,19 +123,19 @@ function Library:CreateWindow(title)
 	TabContainer.Name = "TabContainer"
 	TabContainer.Parent = TabScroll
 	TabContainer.BackgroundTransparency = 1
-	TabContainer.Size = UDim2.new(0, 0, 1, 0) -- width will grow
+	TabContainer.Size = UDim2.new(0, 0, 1, 0)
 
 	local UIListLayout = Instance.new("UIListLayout")
 	UIListLayout.Parent = TabContainer
 	UIListLayout.FillDirection = Enum.FillDirection.Horizontal
 	UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 	UIListLayout.Padding = UDim.new(0, 6)
+	UIListLayout.VerticalAlignment = Enum.VerticalAlignment.Center
 
 	local UIPadding = Instance.new("UIPadding")
 	UIPadding.Parent = TabContainer
 	UIPadding.PaddingLeft = UDim.new(0, 8)
 
-	-- Window object
 	local Window = {
 		ScreenGui = ScreenGui,
 		Main = Main,
@@ -146,17 +146,17 @@ function Library:CreateWindow(title)
 	}
 
 	function Window:CreateTab(name)
-		-- Tab Button
 		local TabButton = Instance.new("TextButton")
 		TabButton.Name = name
 		TabButton.Parent = TabContainer
 		TabButton.BackgroundColor3 = Color3.fromRGB(43, 43, 43)
-		TabButton.Size = UDim2.new(0, 70, 0.7, 0)
-		TabButton.FontFace = Font.fromName("Montserrat", Enum.FontWeight.ExtraBold)
+		TabButton.Size = UDim2.new(0, 72, 0.72, 0)
+		TabButton.FontFace = Font.fromName("Montserrat", Enum.FontWeight.Bold)
 		TabButton.Text = name
-		TabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+		TabButton.TextColor3 = Color3.fromRGB(180, 180, 180)
 		TabButton.TextScaled = true
 		TabButton.AutoButtonColor = false
+		TabButton.BorderSizePixel = 0
 
 		local ButtonCorner = Instance.new("UICorner")
 		ButtonCorner.CornerRadius = UDim.new(0.35, 0)
@@ -166,8 +166,8 @@ function Library:CreateWindow(title)
 		ButtonStroke.Parent = TabButton
 		ButtonStroke.Color = Color3.fromRGB(62, 62, 62)
 		ButtonStroke.Thickness = 1.5
+		ButtonStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 
-		-- Content Frame for this tab
 		local TabFrame = Instance.new("Frame")
 		TabFrame.Name = name .. "Frame"
 		TabFrame.Parent = Main
@@ -182,21 +182,21 @@ function Library:CreateWindow(title)
 		ContentCorner.CornerRadius = UDim.new(0.04, 0)
 		ContentCorner.Parent = TabFrame
 
-		-- Update canvas size when a new tab is added
 		local function updateCanvas()
-			local totalWidth = 0
+			task.wait()
+			local totalWidth = 8
 			for _, child in ipairs(TabContainer:GetChildren()) do
 				if child:IsA("TextButton") then
 					totalWidth += child.AbsoluteSize.X + 6
 				end
 			end
-			TabContainer.Size = UDim2.new(0, totalWidth + 20, 1, 0)
-			TabScroll.CanvasSize = UDim2.new(0, totalWidth + 20, 0, 0)
+			TabContainer.Size = UDim2.new(0, totalWidth, 1, 0)
+			TabScroll.CanvasSize = UDim2.new(0, totalWidth, 0, 0)
 		end
+
 		updateCanvas()
 		TabButton:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateCanvas)
 
-		-- Tab switching logic
 		local Tab = {
 			Button = TabButton,
 			Frame = TabFrame,
@@ -204,14 +204,15 @@ function Library:CreateWindow(title)
 		}
 
 		function Tab:Show()
-			-- Hide all other tabs
 			for _, otherTab in pairs(Window.Tabs) do
 				otherTab.Frame.Visible = false
 				otherTab.Button.BackgroundColor3 = Color3.fromRGB(43, 43, 43)
+				otherTab.Button.TextColor3 = Color3.fromRGB(180, 180, 180)
 			end
 
 			TabFrame.Visible = true
-			TabButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60) -- active color
+			TabButton.BackgroundColor3 = Color3.fromRGB(55, 55, 55)
+			TabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 			Window.CurrentTab = Tab
 		end
 
@@ -219,10 +220,8 @@ function Library:CreateWindow(title)
 			Tab:Show()
 		end)
 
-		-- Store the tab
 		Window.Tabs[name] = Tab
 
-		-- Automatically show the first tab
 		if not Window.CurrentTab then
 			Tab:Show()
 		end
