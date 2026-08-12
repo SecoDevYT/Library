@@ -190,7 +190,7 @@ function Library:CreateWindow(title)
 			local totalWidth = 12
 			for _, child in ipairs(TabContainer:GetChildren()) do
 				if child:IsA("TextButton") then
-					totalWidth += child.AbsoluteSize.X + 6
+					totalWidth += child.AbsoluteSize.X + 7
 				end
 			end
 			TabContainer.Size = UDim2.new(0, math.max(totalWidth, 400), 1, 0)
