@@ -152,7 +152,7 @@ function Library:CreateWindow(title)
 		TabButton.Parent = TabContainer
 		TabButton.BackgroundColor3 = Color3.fromRGB(43, 43, 43)
 		TabButton.BorderSizePixel = 0
-		TabButton.Size = UDim2.new(0.0494806506, 0, 0.704105675, 0) -- exact from your export
+		TabButton.Size = UDim2.new(0.0094806506, 0, 0.704105675, 0) -- exact from your export
 		TabButton.FontFace = Font.fromName("Montserrat", Enum.FontWeight.Bold)
 		TabButton.Text = name
 		TabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -190,7 +190,7 @@ function Library:CreateWindow(title)
 			local totalWidth = 12
 			for _, child in ipairs(TabContainer:GetChildren()) do
 				if child:IsA("TextButton") then
-					totalWidth += child.AbsoluteSize.X + 8
+					totalWidth += child.AbsoluteSize.X + 6
 				end
 			end
 			TabContainer.Size = UDim2.new(0, math.max(totalWidth, 400), 1, 0)
