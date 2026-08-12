@@ -8,7 +8,7 @@ local function makeDraggable(frame)
 	local dragStart
 	local startPos
 	local currentPos
-	local smoothness = 0.18
+	local smoothness = 0.075
 
 	frame.InputBegan:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -99,7 +99,7 @@ function Library:CreateWindow(title)
 	Line1.Parent = Main
 	Line1.BackgroundColor3 = Color3.fromRGB(148, 148, 148)
 	Line1.BorderSizePixel = 0
-	Line1.Position = UDim2.new(0, 0, 0.074, 0)
+	Line1.Position = UDim2.new(0, 0, 0.085, 0)
 	Line1.Size = UDim2.new(0.9984, 0, 0.003, 0)
 
 	Line2.Name = "Line2"
@@ -152,8 +152,7 @@ function Library:CreateWindow(title)
 		TabButton.Parent = TabContainer
 		TabButton.BackgroundColor3 = Color3.fromRGB(43, 43, 43)
 		TabButton.BorderSizePixel = 0
-		-- Using a size that closely matches the 0.04948 scale from your export
-		TabButton.Size = UDim2.new(0, 71, 0.70, 0)
+		TabButton.Size = UDim2.new(0.0494806506, 0, 0.704105675, 0) -- exact from your export
 		TabButton.FontFace = Font.fromName("Montserrat", Enum.FontWeight.Bold)
 		TabButton.Text = name
 		TabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
