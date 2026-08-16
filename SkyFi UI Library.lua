@@ -657,8 +657,7 @@ local function CreateToggle(componentParent, text, default, callback)
     Create("UISizeConstraint", {
         MaxSize = Vector2.new(190, 42),
         MinSize = Vector2.new(150, 42),
-    }, toggler
-    }, holder)
+    }, toggler)
 
     AddCorner(toggler, 0.5)
 
