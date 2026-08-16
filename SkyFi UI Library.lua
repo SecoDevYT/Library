@@ -1,6 +1,21 @@
 -- SkyFi-UI
 -- Advanced Roblox UI Library
--- Revised after code review and original GUI notes
+-- CURRENT VISUAL REBUILD: 2026-08-16
+-- VERSION TAG: SKYFI-VISUAL-MATCH-01
+--
+-- IMPORTANT CHANGES IN THIS BUILD:
+--   * NO global UI title
+--   * The tab name is the ONLY title, inside the selected tab
+--   * Tab buttons are IMAGE-ONLY and forced to a perfect square
+--   * Top/sidebar split gradients use dedicated visible gradient-holder frames
+--   * CreateFrame() creates the dark rounded component container, NOT a titled frame
+--   * Component controls live INSIDE that container instead of each becoming its own card
+--   * Scrolling uses an explicit CanvasSize calculation
+--   * Main window keeps a stable aspect ratio and uses a responsive UIScale
+--   * Smooth dragging is preserved
+--
+-- GitHub filename:
+-- SkyFi UI Library.lua
 
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
@@ -11,25 +26,35 @@ local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
 local Library = {}
 
+---------------------------------------------------------------------
+-- CONFIG
+---------------------------------------------------------------------
+
 Library.Config = {
-    Title = "SkyFi-UI",
+    Version = "SKYFI-VISUAL-MATCH-01",
+
     DefaultTabIcon = "rbxassetid://103521649749710",
 
-    -- Ordered on purpose. Earlier entries have higher priority.
+    -- Ordered entries. The first matching keyword wins.
     TabIcons = {},
 
     Colors = {
         Background = Color3.fromRGB(15, 15, 15),
         Container = Color3.fromRGB(21, 21, 21),
+
         Button = Color3.fromRGB(27, 27, 27),
         ButtonHover = Color3.fromRGB(23, 23, 23),
+
         ToggleOff = Color3.fromRGB(88, 88, 88),
         ToggleOn = Color3.fromRGB(255, 255, 255),
         ToggleKnob = Color3.fromRGB(4, 4, 4),
+
         SliderBar = Color3.fromRGB(84, 84, 84),
         SliderKnob = Color3.fromRGB(117, 117, 117),
+
         Text = Color3.fromRGB(255, 255, 255),
         SecondaryText = Color3.fromRGB(144, 144, 144),
+
         Stroke = Color3.fromRGB(26, 26, 26),
         ButtonStroke = Color3.fromRGB(30, 30, 30),
     },
@@ -44,6 +69,10 @@ Library.Tabs = {}
 Library.CurrentTab = nil
 Library._connections = {}
 Library._destroyed = false
+
+---------------------------------------------------------------------
+-- HELPERS
+---------------------------------------------------------------------
 
 local function TrackConnection(owner, connection)
     owner._connections = owner._connections or {}
@@ -67,7 +96,7 @@ end
 
 local function Tween(instance, properties, duration)
     if not instance or not instance.Parent then
-        return nil
+        return
     end
 
     local tween = TweenService:Create(
@@ -131,7 +160,7 @@ local function GetTabIcon(tabName)
 end
 
 ---------------------------------------------------------------------
--- GUI
+-- ROOT GUI
 ---------------------------------------------------------------------
 
 local ScreenGui = Create("ScreenGui", {
@@ -143,35 +172,99 @@ local ScreenGui = Create("ScreenGui", {
 
 Library.ScreenGui = ScreenGui
 
+---------------------------------------------------------------------
+-- MAIN WINDOW
+---------------------------------------------------------------------
+
 local MainFrame = Create("Frame", {
     Name = "Main",
     BackgroundColor3 = Library.Config.Colors.Background,
     BorderSizePixel = 0,
+
     AnchorPoint = Vector2.new(0.5, 0.5),
     Position = UDim2.fromScale(0.5, 0.5),
-    Size = UDim2.fromScale(0.355, 0.44),
+
+    -- Stable pixel base size. UIScale below handles screen-size changes.
+    Size = UDim2.fromOffset(680, 443),
 }, ScreenGui)
 
 Library.MainFrame = MainFrame
 
-AddCorner(MainFrame, 0.075)
+-- Slightly smaller than the original outer corner.
+AddCorner(MainFrame, 0.055)
 
 Create("UIAspectRatioConstraint", {
     AspectRatio = 1.536,
 }, MainFrame)
 
+local UIScale = Create("UIScale", {
+    Scale = 1,
+}, MainFrame)
+
+local function UpdateUIScale()
+    local camera = workspace.CurrentCamera
+
+    if not camera then
+        return
+    end
+
+    local viewport = camera.ViewportSize
+    local referenceWidth = 1920
+
+    -- Keeps the UI from becoming huge on fullscreen/large displays,
+    -- while still scaling down on small Roblox windows.
+    local scale = math.clamp(viewport.X / referenceWidth, 0.72, 1)
+
+    UIScale.Scale = scale
+end
+
+UpdateUIScale()
+
+local cameraConnection
+local function BindCamera()
+    if cameraConnection then
+        cameraConnection:Disconnect()
+        cameraConnection = nil
+    end
+
+    local camera = workspace.CurrentCamera
+    if camera then
+        cameraConnection = camera:GetPropertyChangedSignal("ViewportSize"):Connect(UpdateUIScale)
+        TrackConnection(Library, cameraConnection)
+    end
+end
+
+BindCamera()
+
+TrackConnection(Library, workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
+    BindCamera()
+    UpdateUIScale()
+end))
+
 ---------------------------------------------------------------------
--- TOP BAR
+-- TOP SECTION
 ---------------------------------------------------------------------
 
+-- This is the invisible drag zone.
 local TopBar = Create("Frame", {
     Name = "TopBar",
     BackgroundTransparency = 1,
     BorderSizePixel = 0,
     Size = UDim2.fromScale(1, 0.164),
+    Active = true,
 }, MainFrame)
 
--- Intentional visual design: creates the thin split/fade line.
+-- IMPORTANT:
+-- The gradient is on a REAL visible frame, just like the converted GUI.
+local TopGradientFrame = Create("Frame", {
+    Name = "TopGradient",
+    BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+    BorderSizePixel = 0,
+    Size = UDim2.fromScale(1, 0.164),
+}, MainFrame)
+
+TopGradientFrame.ZIndex = 2
+
 Create("UIGradient", {
     Color = ColorSequence.new({
         ColorSequenceKeypoint.new(0, Color3.fromRGB(39, 39, 39)),
@@ -179,35 +272,46 @@ Create("UIGradient", {
     }),
     Rotation = 90,
     Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 1),
-        NumberSequenceKeypoint.new(0.96, 1),
-        NumberSequenceKeypoint.new(0.96, 0),
-        NumberSequenceKeypoint.new(1, 0),
+        NumberSequenceKeypoint.new(0.00, 1.00),
+        NumberSequenceKeypoint.new(0.96, 1.00),
+        NumberSequenceKeypoint.new(0.96, 0.00),
+        NumberSequenceKeypoint.new(1.00, 0.00),
     }),
-}, TopBar)
+}, TopGradientFrame)
 
-local Title = Create("TextLabel", {
-    Name = "Title",
+-- Logo. No title.
+local Logo = Create("ImageLabel", {
+    Name = "Logo",
     BackgroundTransparency = 1,
-    Position = UDim2.fromScale(0.005, 0),
-    Size = UDim2.fromScale(0.86, 0.95),
-    Font = Enum.Font.Nunito,
-    Text = Library.Config.Title,
-    TextColor3 = Library.Config.Colors.Text,
-    TextScaled = true,
-    TextWrapped = true,
-    TextXAlignment = Enum.TextXAlignment.Left,
-}, TopBar)
+    BorderSizePixel = 0,
 
+    Position = UDim2.fromScale(0.02045, 0.0266),
+    Size = UDim2.fromOffset(28, 27),
+
+    Image = "rbxassetid://88799636029598",
+    ScaleType = Enum.ScaleType.Fit,
+}, MainFrame)
+
+Logo.ZIndex = 5
+
+-- Close button.
 local Close = Create("ImageButton", {
     Name = "Close",
     BackgroundTransparency = 1,
+    BorderSizePixel = 0,
+
     AnchorPoint = Vector2.new(1, 0),
-    Position = UDim2.fromScale(0.99, 0.08),
-    Size = UDim2.fromScale(0.075, 0.82),
+    Position = UDim2.fromScale(0.99, 0.018),
+
+    Size = UDim2.fromScale(0.0815, 0.1277),
+
     Image = "rbxassetid://97652315417935",
+    ScaleType = Enum.ScaleType.Fit,
+
     AutoButtonColor = false,
-}, TopBar)
+}, MainFrame)
+
+Close.ZIndex = 6
 
 TrackConnection(Library, Close.MouseEnter:Connect(function()
     Tween(Close, {ImageTransparency = 0.3}, Library.Config.Animation.Fast)
@@ -218,48 +322,62 @@ TrackConnection(Library, Close.MouseLeave:Connect(function()
 end))
 
 ---------------------------------------------------------------------
--- TAB SIDEBAR
+-- SIDEBAR
 ---------------------------------------------------------------------
 
 local Sidebar = Create("Frame", {
     Name = "TabButtons",
     BackgroundTransparency = 1,
     BorderSizePixel = 0,
-    Position = UDim2.fromScale(0, 0.164),
-    Size = UDim2.fromScale(0.126, 0.836),
+
+    Position = UDim2.fromScale(0, 0.1642857),
+    Size = UDim2.fromScale(0.1255814, 0.8357143),
 }, MainFrame)
 
--- Intentional visual design: this creates the split between sidebar and content.
+-- REAL visible gradient-holder frame.
+local SidebarGradientFrame = Create("Frame", {
+    Name = "SidebarGradient",
+    BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+    BorderSizePixel = 0,
+
+    Position = UDim2.fromScale(0, 0.1642857),
+    Size = UDim2.fromScale(0.1255814, 0.8357143),
+}, MainFrame)
+
+SidebarGradientFrame.ZIndex = 2
+
 Create("UIGradient", {
     Color = ColorSequence.new({
         ColorSequenceKeypoint.new(0, Color3.fromRGB(39, 39, 39)),
         ColorSequenceKeypoint.new(1, Color3.fromRGB(39, 39, 39)),
     }),
-    Rotation = 90,
     Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 1),
-        NumberSequenceKeypoint.new(0.96, 1),
-        NumberSequenceKeypoint.new(0.96, 0),
-        NumberSequenceKeypoint.new(1, 0),
+        NumberSequenceKeypoint.new(0.00, 1.00),
+        NumberSequenceKeypoint.new(0.96, 1.00),
+        NumberSequenceKeypoint.new(0.96, 0.00),
+        NumberSequenceKeypoint.new(1.00, 0.00),
     }),
-}, Sidebar)
+}, SidebarGradientFrame)
 
 local TabButtonScrolling = Create("ScrollingFrame", {
-    Name = "Scrolling",
+    Name = "TabButtonScrolling",
     BackgroundTransparency = 1,
     BorderSizePixel = 0,
+
     Size = UDim2.fromScale(1, 1),
+
     Active = true,
     ScrollBarThickness = 0,
-    AutomaticCanvasSize = Enum.AutomaticSize.Y,
-    CanvasSize = UDim2.new(),
+    CanvasSize = UDim2.new(0, 0, 0, 0),
 }, Sidebar)
 
+TabButtonScrolling.ZIndex = 4
+
 Create("UIPadding", {
-    PaddingTop = UDim.new(0.025, 0),
-    PaddingBottom = UDim.new(0.025, 0),
-    PaddingLeft = UDim.new(0.08, 0),
-    PaddingRight = UDim.new(0.08, 0),
+    PaddingTop = UDim.new(0.0286, 0),
+    PaddingBottom = UDim.new(0.02, 0),
+    PaddingLeft = UDim.new(0.096, 0),
+    PaddingRight = UDim.new(0.096, 0),
 }, TabButtonScrolling)
 
 local TabButtonLayout = Create("UIListLayout", {
@@ -267,6 +385,13 @@ local TabButtonLayout = Create("UIListLayout", {
     HorizontalAlignment = Enum.HorizontalAlignment.Center,
     SortOrder = Enum.SortOrder.LayoutOrder,
 }, TabButtonScrolling)
+
+TrackConnection(Library, TabButtonLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    TabButtonScrolling.CanvasSize = UDim2.fromOffset(
+        0,
+        TabButtonLayout.AbsoluteContentSize.Y + 20
+    )
+end))
 
 ---------------------------------------------------------------------
 -- CONTENT AREA
@@ -276,9 +401,12 @@ local TabsContainer = Create("Frame", {
     Name = "Tabs",
     BackgroundTransparency = 1,
     BorderSizePixel = 0,
-    Position = UDim2.fromScale(0.126, 0.164),
-    Size = UDim2.fromScale(0.874, 0.836),
+
+    Position = UDim2.fromScale(0.1255814, 0.1642857),
+    Size = UDim2.fromScale(0.8744186, 0.8321428),
 }, MainFrame)
+
+TabsContainer.ZIndex = 3
 
 ---------------------------------------------------------------------
 -- DRAGGING
@@ -298,21 +426,17 @@ TrackConnection(Library, TopBar.InputBegan:Connect(function(input)
     end
 end))
 
-TrackConnection(Library, TopBar.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
-
-        Library._dragging = false
-    end
-end))
-
 TrackConnection(Library, UserInputService.InputChanged:Connect(function(input)
-    if not Library._dragging or not Library._dragStart or not Library._startPosition then
+    if not Library._dragging then
         return
     end
 
     if input.UserInputType ~= Enum.UserInputType.MouseMovement
         and input.UserInputType ~= Enum.UserInputType.Touch then
+        return
+    end
+
+    if not Library._dragStart or not Library._startPosition then
         return
     end
 
@@ -326,6 +450,14 @@ TrackConnection(Library, UserInputService.InputChanged:Connect(function(input)
     )
 end))
 
+TrackConnection(Library, UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+
+        Library._dragging = false
+    end
+end))
+
 TrackConnection(Library, UserInputService.WindowFocusReleased:Connect(function()
     Library._dragging = false
 end))
@@ -335,21 +467,40 @@ TrackConnection(Library, Close.Activated:Connect(function()
 end))
 
 ---------------------------------------------------------------------
--- COMPONENT HELPERS
+-- COMPONENT CONTAINER
 ---------------------------------------------------------------------
 
-local function CreateComponentFrame(parent, name, height)
+-- One CreateFrame() = the dark rounded Tempframe from the source GUI.
+-- Components live directly inside it.
+local function CreateComponentContainer(parent)
     local frame = Create("Frame", {
-        Name = name or "Component",
+        Name = "Tempframe",
         BackgroundColor3 = Library.Config.Colors.Container,
         BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 0, height or 55),
+
+        Size = UDim2.new(0.8378, 0, 0, 100),
     }, parent)
 
-    AddCorner(frame, 0.1)
-    AddStroke(frame, Library.Config.Colors.Stroke, 1)
+    AddCorner(frame, 0.10)
+    local stroke = AddStroke(frame, Library.Config.Colors.Stroke, 1)
 
-    return frame
+    local layout = Create("UIListLayout", {
+        Padding = UDim.new(0, 5),
+        HorizontalAlignment = Enum.HorizontalAlignment.Center,
+        SortOrder = Enum.SortOrder.LayoutOrder,
+    }, frame)
+
+    Create("UIPadding", {
+        PaddingTop = UDim.new(0, 10),
+        PaddingBottom = UDim.new(0, 10),
+    }, frame)
+
+    return frame, layout, stroke
+end
+
+local function UpdateContainerHeight(frame, layout)
+    local height = layout.AbsoluteContentSize.Y + 20
+    frame.Size = UDim2.new(0.8378, 0, 0, math.max(100, height))
 end
 
 ---------------------------------------------------------------------
@@ -361,26 +512,33 @@ local function CreateButton(componentParent, text, callback)
         _connections = {},
     }
 
-    local frame = CreateComponentFrame(componentParent, "Button", 48)
-    object.Instance = frame
-
     local button = Create("TextButton", {
-        Name = "Button",
+        Name = "TempButton",
+
         BackgroundColor3 = Library.Config.Colors.Button,
         BorderSizePixel = 0,
-        Position = UDim2.fromScale(0.05, 0.15),
-        Size = UDim2.fromScale(0.9, 0.7),
+
+        Size = UDim2.fromScale(0.5713, 0.1714),
+        -- Absolute Y size is controlled by the parent layout.
+        AutomaticSize = Enum.AutomaticSize.None,
+
         AutoButtonColor = false,
+
         Font = Enum.Font.Nunito,
         Text = tostring(text),
         TextColor3 = Library.Config.Colors.Text,
         TextScaled = true,
         TextWrapped = true,
-    }, frame)
+    }, componentParent)
+
+    -- The source uses a proportional button inside the frame.
+    button.Size = UDim2.new(0.5713, 0, 0, 42)
+
+    AddCorner(button, 0.10)
+    AddStroke(button, Library.Config.Colors.ButtonStroke, 1)
 
     object.Button = button
-    AddCorner(button, 0.1)
-    AddStroke(button, Library.Config.Colors.ButtonStroke, 1)
+    object.Instance = button
 
     TrackConnection(object, button.MouseEnter:Connect(function()
         Tween(button, {
@@ -406,9 +564,7 @@ local function CreateButton(componentParent, text, callback)
 
     function object:Destroy()
         DisconnectAll(self)
-        if frame then
-            frame:Destroy()
-        end
+        button:Destroy()
     end
 
     return object
@@ -420,30 +576,32 @@ end
 
 local function CreateLabel(componentParent, text)
     local object = {}
-    local frame = CreateComponentFrame(componentParent, "Label", 40)
-
-    object.Instance = frame
 
     local label = Create("TextLabel", {
-        Name = "Label",
+        Name = "TempLabel",
+
         BackgroundTransparency = 1,
-        Position = UDim2.fromScale(0.05, 0.1),
-        Size = UDim2.fromScale(0.9, 0.8),
+        BorderSizePixel = 0,
+
+        Size = UDim2.new(0.9969, 0, 0, 40),
+
         Font = Enum.Font.Nunito,
         Text = tostring(text),
         TextColor3 = Library.Config.Colors.SecondaryText,
+
         TextScaled = true,
         TextWrapped = true,
-    }, frame)
+    }, componentParent)
 
     object.Label = label
+    object.Instance = label
 
     function object:SetText(newText)
         label.Text = tostring(newText)
     end
 
     function object:Destroy()
-        frame:Destroy()
+        label:Destroy()
     end
 
     return object
@@ -464,60 +622,63 @@ local function CreateToggle(componentParent, text, default, callback)
         Enabled = default == true,
     }
 
-    local frame = CreateComponentFrame(componentParent, "Toggle", 48)
-    object.Instance = frame
-
-    Create("TextLabel", {
-        Name = "Label",
+    local holder = Create("Frame", {
+        Name = "TempToggle",
         BackgroundTransparency = 1,
-        Position = UDim2.fromScale(0.05, 0.1),
-        Size = UDim2.fromScale(0.58, 0.8),
-        Font = Enum.Font.Nunito,
-        Text = tostring(text),
-        TextColor3 = Library.Config.Colors.Text,
-        TextScaled = true,
-        TextWrapped = true,
-        TextXAlignment = Enum.TextXAlignment.Left,
-    }, frame)
+        BorderSizePixel = 0,
+
+        Size = UDim2.new(0.4509, 0, 0, 40),
+    }, componentParent)
 
     local toggler = Create("TextButton", {
         Name = "Toggler",
-        BackgroundColor3 = object.Enabled and Library.Config.Colors.ToggleOn or Library.Config.Colors.ToggleOff,
+
+        BackgroundColor3 = object.Enabled
+            and Library.Config.Colors.ToggleOn
+            or Library.Config.Colors.ToggleOff,
+
         BorderSizePixel = 0,
-        AnchorPoint = Vector2.new(1, 0.5),
-        Position = UDim2.fromScale(0.94, 0.5),
-        Size = UDim2.fromScale(0.25, 0.62),
-        Text = "",
+
+        Size = UDim2.fromScale(1, 1),
+
         AutoButtonColor = false,
-    }, frame)
+        Text = "",
+    }, holder)
 
-    object.Toggle = toggler
-
-    -- Intentional pill-shaped design from the original UI.
     AddCorner(toggler, 0.5)
 
-    local toggleKnob = Create("Frame", {
+    local knob = Create("Frame", {
         Name = "ToggleFrame",
+
         BackgroundColor3 = Library.Config.Colors.ToggleKnob,
         BorderSizePixel = 0,
-        Position = object.Enabled and UDim2.fromScale(0.614, 0.098) or UDim2.fromScale(0.05, 0.098),
+
+        Position = object.Enabled
+            and UDim2.fromScale(0.614, 0.098)
+            or UDim2.fromScale(0.05, 0.098),
+
         Size = UDim2.fromScale(0.333, 0.784),
     }, toggler)
 
-    AddCorner(toggleKnob, 0.5)
+    AddCorner(knob, 0.5)
+
+    object.Toggle = toggler
+    object.Instance = holder
 
     local function UpdateToggle(newValue, fireCallback)
         object.Enabled = newValue == true
 
         Tween(toggler, {
-            BackgroundColor3 = object.Enabled and Library.Config.Colors.ToggleOn or Library.Config.Colors.ToggleOff,
-        }, Library.Config.Animation.Normal)
+            BackgroundColor3 = object.Enabled
+                and Library.Config.Colors.ToggleOn
+                or Library.Config.Colors.ToggleOff,
+        })
 
-        Tween(toggleKnob, {
+        Tween(knob, {
             Position = object.Enabled
                 and UDim2.fromScale(0.614, 0.098)
                 or UDim2.fromScale(0.05, 0.098),
-        }, Library.Config.Animation.Normal)
+        })
 
         if fireCallback and typeof(callback) == "function" then
             task.spawn(callback, object.Enabled)
@@ -538,7 +699,7 @@ local function CreateToggle(componentParent, text, default, callback)
 
     function object:Destroy()
         DisconnectAll(self)
-        frame:Destroy()
+        holder:Destroy()
     end
 
     return object
@@ -568,55 +729,63 @@ local function CreateSlider(componentParent, options, callback)
         _connections = {},
     }
 
-    local frame = CreateComponentFrame(componentParent, "Slider", 72)
-    object.Instance = frame
+    local holder = Create("Frame", {
+        Name = "TempSlider",
 
-    Create("TextLabel", {
-        Name = "Label",
         BackgroundTransparency = 1,
-        Position = UDim2.fromScale(0.05, 0.05),
-        Size = UDim2.fromScale(0.9, 0.32),
-        Font = Enum.Font.Nunito,
-        Text = tostring(options.text or options.name or "Slider"),
-        TextColor3 = Library.Config.Colors.Text,
-        TextScaled = true,
-        TextWrapped = true,
-    }, frame)
+        BorderSizePixel = 0,
 
-    local valueLabel = Create("TextLabel", {
-        Name = "Value",
-        BackgroundTransparency = 1,
-        Position = UDim2.fromScale(0.05, 0.38),
-        Size = UDim2.fromScale(0.9, 0.25),
-        Font = Enum.Font.Nunito,
-        Text = tostring(value),
-        TextColor3 = Library.Config.Colors.SecondaryText,
-        TextScaled = true,
-        TextWrapped = true,
-    }, frame)
+        Size = UDim2.new(0.9433, 0, 0, 62),
+    }, componentParent)
 
-    local slideBar = Create("Frame", {
+    local sliderBar = Create("Frame", {
         Name = "SlideBar",
+
         BackgroundColor3 = Library.Config.Colors.SliderBar,
         BorderSizePixel = 0,
-        AnchorPoint = Vector2.new(0.5, 0),
-        Position = UDim2.fromScale(0.5, 0.73),
-        Size = UDim2.fromScale(0.88, 0.11),
-    }, frame)
 
-    AddCorner(slideBar, 10)
+        Position = UDim2.fromScale(0.003, 0.09),
+        Size = UDim2.fromScale(0.994, 0.16),
+    }, holder)
+
+    AddCorner(sliderBar, 10)
 
     local knob = Create("TextButton", {
         Name = "SliderButton",
+
         BackgroundColor3 = Library.Config.Colors.SliderKnob,
         BorderSizePixel = 0,
+
         AnchorPoint = Vector2.new(0.5, 0.5),
-        Size = UDim2.fromScale(0.07, 2.2),
-        Text = "",
+        Position = UDim2.new(1, 0, 0.5, 0),
+
+        Size = UDim2.fromScale(0.0991, 2),
+
         AutoButtonColor = false,
-    }, slideBar)
+        Text = "",
+    }, sliderBar)
 
     AddCorner(knob, 10)
+
+    local valueLabel = Create("TextLabel", {
+        Name = "Label",
+
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+
+        Position = UDim2.fromScale(-0.0214, 0.4164),
+        Size = UDim2.fromScale(1.048, 0.5395),
+
+        Font = Enum.Font.Nunito,
+        Text = tostring(value),
+
+        TextColor3 = Library.Config.Colors.SecondaryText,
+        TextScaled = true,
+        TextWrapped = true,
+    }, holder)
+
+    object.Instance = holder
+    object.Slider = sliderBar
 
     local dragging = false
 
@@ -630,6 +799,7 @@ local function CreateSlider(componentParent, options, callback)
 
     local function AlphaToValue(alpha)
         local raw = minimum + ((maximum - minimum) * alpha)
+
         return RoundNumber(
             Clamp(raw, minimum, maximum),
             options.decimals or 0
@@ -649,16 +819,16 @@ local function CreateSlider(componentParent, options, callback)
         valueLabel.Text = tostring(value)
     end
 
-    local function SetValueFromMouse(mouseX, fireCallback)
-        local absoluteX = slideBar.AbsolutePosition.X
-        local absoluteWidth = slideBar.AbsoluteSize.X
+    local function SetFromMouse(mouseX, fireCallback)
+        local x = sliderBar.AbsolutePosition.X
+        local width = sliderBar.AbsoluteSize.X
 
-        if absoluteWidth <= 0 then
+        if width <= 0 then
             return
         end
 
         local alpha = Clamp(
-            (mouseX - absoluteX) / absoluteWidth,
+            (mouseX - x) / width,
             0,
             1
         )
@@ -673,22 +843,21 @@ local function CreateSlider(componentParent, options, callback)
 
     UpdateVisual(value)
 
-    -- Use InputBegan so the InputObject is the source of truth for both mouse and touch.
+    TrackConnection(object, sliderBar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
+
+            dragging = true
+            SetFromMouse(input.Position.X, true)
+        end
+    end))
+
     TrackConnection(object, knob.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1
             or input.UserInputType == Enum.UserInputType.Touch then
 
             dragging = true
-            SetValueFromMouse(input.Position.X, true)
-        end
-    end))
-
-    TrackConnection(object, slideBar.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1
-            or input.UserInputType == Enum.UserInputType.Touch then
-
-            dragging = true
-            SetValueFromMouse(input.Position.X, true)
+            SetFromMouse(input.Position.X, true)
         end
     end))
 
@@ -700,7 +869,7 @@ local function CreateSlider(componentParent, options, callback)
         if input.UserInputType == Enum.UserInputType.MouseMovement
             or input.UserInputType == Enum.UserInputType.Touch then
 
-            SetValueFromMouse(input.Position.X, true)
+            SetFromMouse(input.Position.X, true)
         end
     end))
 
@@ -722,6 +891,7 @@ local function CreateSlider(componentParent, options, callback)
 
     function object:SetValue(newValue, fireCallback)
         newValue = tonumber(newValue)
+
         if not newValue then
             return
         end
@@ -750,7 +920,7 @@ local function CreateSlider(componentParent, options, callback)
     function object:Destroy()
         dragging = false
         DisconnectAll(self)
-        frame:Destroy()
+        holder:Destroy()
     end
 
     return object
@@ -768,15 +938,14 @@ local function CreateList(componentParent, options, callback)
         Items = {},
     }
 
-    local frame = CreateComponentFrame(componentParent, "List", 55)
-    object.Instance = frame
+    local frame = Create("Frame", {
+        Name = "List",
 
-    Create("UIPadding", {
-        PaddingTop = UDim.new(0, 8),
-        PaddingBottom = UDim.new(0, 8),
-        PaddingLeft = UDim.new(0.04, 0),
-        PaddingRight = UDim.new(0.04, 0),
-    }, frame)
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+
+        Size = UDim2.new(0.9, 0, 0, 55),
+    }, componentParent)
 
     local layout = Create("UIListLayout", {
         Padding = UDim.new(0, 5),
@@ -785,82 +954,90 @@ local function CreateList(componentParent, options, callback)
     }, frame)
 
     local function UpdateHeight()
-        local height = math.max(55, layout.AbsoluteContentSize.Y + 16)
-        frame.Size = UDim2.new(1, 0, 0, height)
+        frame.Size = UDim2.new(
+            0.9,
+            0,
+            0,
+            math.max(34, layout.AbsoluteContentSize.Y)
+        )
     end
 
-    TrackConnection(object, layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(UpdateHeight))
+    TrackConnection(
+        object,
+        layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(UpdateHeight)
+    )
 
-    function object:Add(item, fireCallback)
+    function object:Add(item)
         local index = #object.Items + 1
 
-        local itemButton = Create("TextButton", {
+        local button = Create("TextButton", {
             Name = "Item_" .. index,
+
             BackgroundColor3 = Library.Config.Colors.Button,
             BorderSizePixel = 0,
+
             Size = UDim2.new(1, 0, 0, 28),
+
             AutoButtonColor = false,
+
             Font = Enum.Font.Nunito,
             Text = tostring(item),
             TextColor3 = Library.Config.Colors.Text,
+
             TextScaled = true,
             TextWrapped = true,
+
             LayoutOrder = index,
         }, frame)
 
-        AddCorner(itemButton, 0.1)
+        AddCorner(button, 0.1)
 
-        local itemData = {
+        local data = {
             Value = item,
-            Button = itemButton,
+            Button = button,
+            _connections = {},
         }
 
-        table.insert(object.Items, itemData)
+        table.insert(object.Items, data)
 
-        itemData.HoverConnection = itemButton.MouseEnter:Connect(function()
-            Tween(itemButton, {
+        TrackConnection(data, button.MouseEnter:Connect(function()
+            Tween(button, {
                 BackgroundColor3 = Library.Config.Colors.ButtonHover,
             }, Library.Config.Animation.Fast)
-        end)
+        end))
 
-        itemData.LeaveConnection = itemButton.MouseLeave:Connect(function()
-            Tween(itemButton, {
+        TrackConnection(data, button.MouseLeave:Connect(function()
+            Tween(button, {
                 BackgroundColor3 = Library.Config.Colors.Button,
             }, Library.Config.Animation.Fast)
-        end)
+        end))
 
-        itemData.ActivatedConnection = itemButton.Activated:Connect(function()
+        TrackConnection(data, button.Activated:Connect(function()
             if typeof(callback) == "function" then
-                task.spawn(callback, itemData.Value, table.find(object.Items, itemData))
+                task.spawn(
+                    callback,
+                    data.Value,
+                    table.find(object.Items, data)
+                )
             end
-        end)
-
-        if fireCallback and typeof(callback) == "function" then
-            task.spawn(callback, item, index)
-        end
+        end))
 
         task.defer(UpdateHeight)
-        return itemData
+
+        return data
     end
 
     function object:Remove(index)
-        local itemData = object.Items[index]
-        if not itemData then
+        local data = object.Items[index]
+
+        if not data then
             return false
         end
 
-        if itemData.HoverConnection then
-            itemData.HoverConnection:Disconnect()
-        end
-        if itemData.LeaveConnection then
-            itemData.LeaveConnection:Disconnect()
-        end
-        if itemData.ActivatedConnection then
-            itemData.ActivatedConnection:Disconnect()
-        end
+        DisconnectAll(data)
 
-        if itemData.Button then
-            itemData.Button:Destroy()
+        if data.Button then
+            data.Button:Destroy()
         end
 
         table.remove(object.Items, index)
@@ -871,20 +1048,15 @@ local function CreateList(componentParent, options, callback)
         end
 
         task.defer(UpdateHeight)
+
         return true
     end
 
     function object:Clear()
         for index = #object.Items, 1, -1 do
-            object:Remove(index)
+            self:Remove(index)
         end
     end
-
-    for _, item in ipairs(options.items or {}) do
-        object:Add(item, false)
-    end
-
-    task.defer(UpdateHeight)
 
     function object:Destroy()
         self:Clear()
@@ -892,6 +1064,13 @@ local function CreateList(componentParent, options, callback)
         frame:Destroy()
     end
 
+    for _, item in ipairs(options.items or {}) do
+        object:Add(item)
+    end
+
+    task.defer(UpdateHeight)
+
+    object.Instance = frame
     return object
 end
 
@@ -899,40 +1078,40 @@ end
 -- FRAME OBJECT
 ---------------------------------------------------------------------
 
-local function BuildFrameObject(tabObject, frameInstance)
+local function BuildFrameObject(frame, tabObject)
     local object = {
-        Instance = frameInstance,
+        Instance = frame,
         ParentTab = tabObject,
         _connections = {},
     }
 
     function object:CreateButton(text, callback)
-        return CreateButton(frameInstance, text, callback)
-    end
-
-    function object:CreateToggle(text, default, callback)
-        return CreateToggle(frameInstance, text, default, callback)
+        return CreateButton(frame, text, callback)
     end
 
     function object:CreateLabel(text)
-        return CreateLabel(frameInstance, text)
+        return CreateLabel(frame, text)
+    end
+
+    function object:CreateToggle(text, default, callback)
+        return CreateToggle(frame, text, default, callback)
     end
 
     function object:CreateSlider(options, callback)
-        return CreateSlider(frameInstance, options, callback)
+        return CreateSlider(frame, options, callback)
     end
 
     function object:CreateList(options, callback)
-        return CreateList(frameInstance, options, callback)
+        return CreateList(frame, options, callback)
     end
 
     function object:SetVisible(visible)
-        frameInstance.Visible = visible
+        frame.Visible = visible == true
     end
 
     function object:Destroy()
         DisconnectAll(self)
-        frameInstance:Destroy()
+        frame:Destroy()
     end
 
     return object
@@ -947,105 +1126,78 @@ local function BuildTabObject(tabName, tabContent, tabButton)
         Name = tabName,
         Instance = tabContent,
         Button = tabButton,
+
         Frames = {},
+
         _connections = {},
     }
-
-    local overlay = tabButton:FindFirstChild("Overlay")
-    local label = overlay and overlay:FindFirstChild("Label")
 
     function object:SetAppearance(active, instant)
         local duration = instant and 0 or Library.Config.Animation.Normal
 
-        if active then
-            Tween(tabButton, {ImageTransparency = 0}, duration)
-            if label then
-                Tween(label, {
-                    TextColor3 = Library.Config.Colors.Text,
-                }, duration)
-            end
-        else
-            Tween(tabButton, {ImageTransparency = 0.3}, duration)
-            if label then
-                Tween(label, {
-                    TextColor3 = Library.Config.Colors.SecondaryText,
-                }, duration)
-            end
-        end
+        Tween(
+            tabButton,
+            {
+                ImageTransparency = active and 0 or 0.3,
+            },
+            duration
+        )
     end
 
-    function object:CreateFrame(frameName)
-        local frame = Create("Frame", {
-            Name = tostring(frameName or "Frame"),
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-            Size = UDim2.new(1, 0, 0, 65),
-        }, tabContent)
+    -- IMPORTANT:
+    -- The tab title is created ONCE here.
+    -- CreateFrame() does NOT create a title.
+    local tabTitle = Create("TextLabel", {
+        Name = "Title",
 
-        local title = Create("TextLabel", {
-            Name = "Title",
-            BackgroundTransparency = 1,
-            Position = UDim2.fromScale(0.03, 0),
-            Size = UDim2.fromScale(0.94, 0.18),
-            Font = Enum.Font.Nunito,
-            Text = tostring(frameName or "Frame"),
-            TextColor3 = Library.Config.Colors.Text,
-            TextScaled = true,
-            TextWrapped = true,
-            TextXAlignment = Enum.TextXAlignment.Left,
-        }, frame)
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
 
-        local componentContainer = Create("Frame", {
-            Name = "Components",
-            BackgroundTransparency = 1,
-            Position = UDim2.fromScale(0.03, 0.2),
-            Size = UDim2.new(0.94, 0, 0, 0),
-        }, frame)
+        Position = UDim2.fromScale(0.0055, 0),
+        Size = UDim2.fromScale(0.9969, 0.1432),
 
-        local layout = Create("UIListLayout", {
-            Padding = UDim.new(0, 8),
-            HorizontalAlignment = Enum.HorizontalAlignment.Center,
-            SortOrder = Enum.SortOrder.LayoutOrder,
-        }, componentContainer)
+        Font = Enum.Font.Nunito,
+        Text = tabName,
+        TextColor3 = Library.Config.Colors.Text,
 
-        Create("UIPadding", {
-            PaddingBottom = UDim.new(0, 5),
-        }, componentContainer)
+        TextScaled = true,
+        TextWrapped = true,
+    }, tabContent)
 
-        local frameObject = BuildFrameObject(object, componentContainer)
+    tabTitle.LayoutOrder = 1
+
+    object.Title = tabTitle
+
+    function object:CreateFrame()
+        local frame = CreateComponentContainer(tabContent)
+
+        frame.LayoutOrder = #object.Frames + 2
+
+        local layout = frame:FindFirstChildOfClass("UIListLayout")
+
+        local frameObject = BuildFrameObject(frame, object)
+
         frameObject.Root = frame
-        frameObject.Title = title
-        frameObject.Components = componentContainer
+        frameObject.Layout = layout
 
-        local function UpdateFrameSize()
-            local height = layout.AbsoluteContentSize.Y
+        TrackConnection(
+            frameObject,
+            layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+                UpdateContainerHeight(frame, layout)
+            end)
+        )
 
-            componentContainer.Size = UDim2.new(
-                0.94,
-                0,
-                0,
-                height + 5
-            )
-
-            frame.Size = UDim2.new(
-                1,
-                0,
-                0,
-                math.max(65, height + 60)
-            )
-        end
-
-        frameObject._layoutConnection = layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(UpdateFrameSize)
-        table.insert(frameObject._connections, frameObject._layoutConnection)
-
-        task.defer(UpdateFrameSize)
+        task.defer(function()
+            UpdateContainerHeight(frame, layout)
+        end)
 
         table.insert(object.Frames, frameObject)
+
         return frameObject
     end
 
     function object:SetVisible(visible)
-        tabContent.Visible = visible
+        tabContent.Visible = visible == true
     end
 
     function object:Destroy()
@@ -1056,15 +1208,16 @@ local function BuildTabObject(tabName, tabContent, tabButton)
             table.remove(Library.Tabs, index)
         end
 
-        if self.Button then
-            self.Button:Destroy()
-        end
-        if self.Instance then
-            self.Instance:Destroy()
-        end
-
         if Library.CurrentTab == self then
             Library.CurrentTab = nil
+        end
+
+        if tabButton then
+            tabButton:Destroy()
+        end
+
+        if tabContent then
+            tabContent:Destroy()
         end
     end
 
@@ -1076,80 +1229,96 @@ end
 ---------------------------------------------------------------------
 
 function Library:CreateTab(tabName)
-    assert(not Library._destroyed, "SkyFi-UI has been destroyed")
+    assert(not Library._destroyed, "SkyFi-UI has already been destroyed")
 
     tabName = tostring(tabName or "Tab")
 
     local tabContent = Create("ScrollingFrame", {
         Name = tabName,
+
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
+
         Size = UDim2.fromScale(1, 1),
+
         Active = true,
+
         ScrollBarThickness = 0,
-        AutomaticCanvasSize = Enum.AutomaticSize.Y,
-        CanvasSize = UDim2.new(),
+
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+
         Visible = false,
     }, TabsContainer)
 
+    tabContent.ZIndex = 4
+
     Create("UIPadding", {
-        PaddingTop = UDim.new(0.02, 0),
+        PaddingTop = UDim.new(0.01, 0),
         PaddingBottom = UDim.new(0.03, 0),
-        PaddingLeft = UDim.new(0.03, 0),
-        PaddingRight = UDim.new(0.03, 0),
     }, tabContent)
 
-    Create("UIListLayout", {
-        Padding = UDim.new(0, 8),
+    local contentLayout = Create("UIListLayout", {
+        Padding = UDim.new(0, 6),
+
         SortOrder = Enum.SortOrder.LayoutOrder,
         HorizontalAlignment = Enum.HorizontalAlignment.Center,
     }, tabContent)
 
+    local function UpdateTabCanvas()
+        tabContent.CanvasSize = UDim2.fromOffset(
+            0,
+            contentLayout.AbsoluteContentSize.Y + 16
+        )
+    end
+
+    TrackConnection(
+        Library,
+        contentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(UpdateTabCanvas)
+    )
+
     local tabButton = Create("ImageButton", {
         Name = tabName:gsub("%s+", "_"),
+
         BackgroundTransparency = 1,
-        Size = UDim2.fromScale(0.79, 0.086),
+        BorderSizePixel = 0,
+
+        -- Width is proportional to sidebar width.
+        -- UIAspectRatio makes the actual icon a perfect square.
+        Size = UDim2.fromScale(0.7885, 0.0859),
+
         Image = GetTabIcon(tabName),
+
+        ScaleType = Enum.ScaleType.Fit,
+
         AutoButtonColor = false,
+
         LayoutOrder = #Library.Tabs + 1,
     }, TabButtonScrolling)
 
-    local overlay = Create("Frame", {
-        Name = "Overlay",
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        Size = UDim2.fromScale(1, 1),
+    tabButton.ZIndex = 5
+
+    Create("UIAspectRatioConstraint", {
+        AspectRatio = 1,
     }, tabButton)
 
-    AddCorner(overlay, 0.2)
-
-    Create("TextLabel", {
-        Name = "Label",
-        BackgroundTransparency = 1,
-        Position = UDim2.fromScale(0.12, 0),
-        Size = UDim2.fromScale(0.78, 1),
-        Font = Enum.Font.Nunito,
-        Text = tabName,
-        TextColor3 = Library.Config.Colors.SecondaryText,
-        TextScaled = true,
-        TextWrapped = true,
-        TextXAlignment = Enum.TextXAlignment.Left,
-    }, overlay)
-
-    local tabObject = BuildTabObject(tabName, tabContent, tabButton)
+    local tabObject = BuildTabObject(
+        tabName,
+        tabContent,
+        tabButton
+    )
 
     TrackConnection(tabObject, tabButton.MouseEnter:Connect(function()
         if Library.CurrentTab == tabObject then
             return
         end
 
-        Tween(tabButton, {
-            ImageTransparency = 0,
-        }, Library.Config.Animation.Fast)
-
-        Tween(tabObject.Button.Overlay.Label, {
-            TextColor3 = Library.Config.Colors.Text,
-        }, Library.Config.Animation.Fast)
+        Tween(
+            tabButton,
+            {
+                ImageTransparency = 0,
+            },
+            Library.Config.Animation.Fast
+        )
     end))
 
     TrackConnection(tabObject, tabButton.MouseLeave:Connect(function()
@@ -1157,13 +1326,13 @@ function Library:CreateTab(tabName)
             return
         end
 
-        Tween(tabButton, {
-            ImageTransparency = 0.3,
-        }, Library.Config.Animation.Fast)
-
-        Tween(tabObject.Button.Overlay.Label, {
-            TextColor3 = Library.Config.Colors.SecondaryText,
-        }, Library.Config.Animation.Fast)
+        Tween(
+            tabButton,
+            {
+                ImageTransparency = 0.3,
+            },
+            Library.Config.Animation.Fast
+        )
     end))
 
     TrackConnection(tabObject, tabButton.Activated:Connect(function()
@@ -1171,6 +1340,8 @@ function Library:CreateTab(tabName)
     end))
 
     table.insert(Library.Tabs, tabObject)
+
+    UpdateTabCanvas()
 
     if not Library.CurrentTab then
         Library:SelectTab(tabObject, true)
@@ -1180,7 +1351,7 @@ function Library:CreateTab(tabName)
 end
 
 ---------------------------------------------------------------------
--- SELECT TAB
+-- TAB SELECTION
 ---------------------------------------------------------------------
 
 function Library:SelectTab(tab, instant)
@@ -1188,8 +1359,7 @@ function Library:SelectTab(tab, instant)
         return
     end
 
-    local valid = table.find(Library.Tabs, tab) ~= nil
-    if not valid then
+    if not table.find(Library.Tabs, tab) then
         return
     end
 
@@ -1197,6 +1367,7 @@ function Library:SelectTab(tab, instant)
 
     for _, otherTab in ipairs(Library.Tabs) do
         local active = otherTab == tab
+
         otherTab:SetVisible(active)
         otherTab:SetAppearance(active, instant == true)
     end
@@ -1215,13 +1386,6 @@ end
 function Library:Toggle()
     if not Library._destroyed then
         ScreenGui.Enabled = not ScreenGui.Enabled
-    end
-end
-
-function Library:SetTitle(text)
-    Library.Config.Title = tostring(text)
-    if Title and Title.Parent then
-        Title.Text = Library.Config.Title
     end
 end
 
