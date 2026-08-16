@@ -1,7 +1,8 @@
 -- SkyFi-UI
 -- Advanced Roblox UI Library
 -- CURRENT VISUAL REBUILD: 2026-08-16
--- VERSION TAG: SKYFI-VISUAL-MATCH-01
+-- VERSION TAG: SKYFI-VISUAL-MATCH-02
+-- SECOND VISUAL PASS: SMALLER WINDOW / MORE SPACING / FIXED COMPONENT SIZING
 --
 -- IMPORTANT CHANGES IN THIS BUILD:
 --   * NO global UI title
@@ -31,7 +32,7 @@ local Library = {}
 ---------------------------------------------------------------------
 
 Library.Config = {
-    Version = "SKYFI-VISUAL-MATCH-01",
+    Version = "SKYFI-VISUAL-MATCH-02",
 
     DefaultTabIcon = "rbxassetid://103521649749710",
 
@@ -185,7 +186,7 @@ local MainFrame = Create("Frame", {
     Position = UDim2.fromScale(0.5, 0.5),
 
     -- Stable pixel base size. UIScale below handles screen-size changes.
-    Size = UDim2.fromOffset(680, 443),
+    Size = UDim2.fromOffset(600, 390),
 }, ScreenGui)
 
 Library.MainFrame = MainFrame
@@ -209,11 +210,11 @@ local function UpdateUIScale()
     end
 
     local viewport = camera.ViewportSize
-    local referenceWidth = 1920
+    local referenceWidth = 1600
 
-    -- Keeps the UI from becoming huge on fullscreen/large displays,
-    -- while still scaling down on small Roblox windows.
-    local scale = math.clamp(viewport.X / referenceWidth, 0.72, 1)
+    -- Keeps the UI compact on fullscreen while remaining usable
+    -- in smaller Roblox windows.
+    local scale = math.clamp(viewport.X / referenceWidth, 0.80, 1)
 
     UIScale.Scale = scale
 end
@@ -485,22 +486,22 @@ local function CreateComponentContainer(parent)
     local stroke = AddStroke(frame, Library.Config.Colors.Stroke, 1)
 
     local layout = Create("UIListLayout", {
-        Padding = UDim.new(0, 5),
+        Padding = UDim.new(0, 12),
         HorizontalAlignment = Enum.HorizontalAlignment.Center,
         SortOrder = Enum.SortOrder.LayoutOrder,
     }, frame)
 
     Create("UIPadding", {
-        PaddingTop = UDim.new(0, 10),
-        PaddingBottom = UDim.new(0, 10),
+        PaddingTop = UDim.new(0, 14),
+        PaddingBottom = UDim.new(0, 14),
     }, frame)
 
     return frame, layout, stroke
 end
 
 local function UpdateContainerHeight(frame, layout)
-    local height = layout.AbsoluteContentSize.Y + 20
-    frame.Size = UDim2.new(0.8378, 0, 0, math.max(100, height))
+    local height = layout.AbsoluteContentSize.Y + 28
+    frame.Size = UDim2.new(0.8378, 0, 0, math.max(120, height))
 end
 
 ---------------------------------------------------------------------
@@ -533,6 +534,10 @@ local function CreateButton(componentParent, text, callback)
 
     -- The source uses a proportional button inside the frame.
     button.Size = UDim2.new(0.5713, 0, 0, 42)
+    Create("UISizeConstraint", {
+        MaxSize = Vector2.new(285, 42),
+        MinSize = Vector2.new(180, 42),
+    }, button)
 
     AddCorner(button, 0.10)
     AddStroke(button, Library.Config.Colors.ButtonStroke, 1)
@@ -583,7 +588,7 @@ local function CreateLabel(componentParent, text)
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
 
-        Size = UDim2.new(0.9969, 0, 0, 40),
+        Size = UDim2.new(0.9969, 0, 0, 44),
 
         Font = Enum.Font.Nunito,
         Text = tostring(text),
@@ -627,7 +632,11 @@ local function CreateToggle(componentParent, text, default, callback)
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
 
-        Size = UDim2.new(0.4509, 0, 0, 40),
+        Size = UDim2.new(0.4509, 0, 0, 42),
+
+        -- Keep the toggle compact rather than letting it become a long bar.
+        AnchorPoint = Vector2.new(0.5, 0),
+        Position = UDim2.fromScale(0.5, 0),
     }, componentParent)
 
     local toggler = Create("TextButton", {
@@ -643,6 +652,12 @@ local function CreateToggle(componentParent, text, default, callback)
 
         AutoButtonColor = false,
         Text = "",
+    }, holder)
+
+    Create("UISizeConstraint", {
+        MaxSize = Vector2.new(190, 42),
+        MinSize = Vector2.new(150, 42),
+    }, toggler
     }, holder)
 
     AddCorner(toggler, 0.5)
@@ -735,7 +750,7 @@ local function CreateSlider(componentParent, options, callback)
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
 
-        Size = UDim2.new(0.9433, 0, 0, 62),
+        Size = UDim2.new(0.9433, 0, 0, 68),
     }, componentParent)
 
     local sliderBar = Create("Frame", {
@@ -1258,7 +1273,7 @@ function Library:CreateTab(tabName)
     }, tabContent)
 
     local contentLayout = Create("UIListLayout", {
-        Padding = UDim.new(0, 6),
+        Padding = UDim.new(0, 10),
 
         SortOrder = Enum.SortOrder.LayoutOrder,
         HorizontalAlignment = Enum.HorizontalAlignment.Center,
@@ -1282,9 +1297,8 @@ function Library:CreateTab(tabName)
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
 
-        -- Width is proportional to sidebar width.
-        -- UIAspectRatio makes the actual icon a perfect square.
-        Size = UDim2.fromScale(0.7885, 0.0859),
+        -- Bigger than the previous build while remaining a perfect square.
+        Size = UDim2.fromOffset(42, 42),
 
         Image = GetTabIcon(tabName),
 
@@ -1299,6 +1313,11 @@ function Library:CreateTab(tabName)
 
     Create("UIAspectRatioConstraint", {
         AspectRatio = 1,
+    }, tabButton)
+
+    Create("UISizeConstraint", {
+        MaxSize = Vector2.new(48, 48),
+        MinSize = Vector2.new(38, 38),
     }, tabButton)
 
     local tabObject = BuildTabObject(
